@@ -3,9 +3,15 @@
 # ~~~~
 
 # Home page
-GET   /               controllers.Application.index
-GET   /api/start      controllers.Application.start(id: String, database: String, topic: String)
-GET   /api/stop       controllers.Application.stop
+GET      /                             controllers.Application.index
+GET      /start                        controllers.Application.start
+GET      /restart                      controllers.Application.restart
+GET      /stop                         controllers.Application.stopAll
+#GET      /status                       controllers.Application.status
+
+POST     /api/persistence/save         controllers.Application.savePersistenceMap
+GET      /api/persistence/list         controllers.Application.findAllPersistenceMaps
+DELETE   /api/persistence/delete/:id   controllers.Application.deletePersistenceMap(id: String)
 
 # Map static resources from the /public folder to the /assets URL path
-GET   /assets/*file   controllers.Assets.versioned(path="/public", file: Asset)
+GET      /assets/*file                 controllers.Assets.versioned(path="/public", file: Asset)

@@ -12,7 +12,8 @@ case class TempSensorData(
   id: String,
   time: DateTime,
   temp: Double,
-  voltage: Double
+  voltage: Double,
+  extra: String
 )
 object TempSensorData {
   implicit val tempSensorDataFormat = Json.format[TempSensorData]
@@ -22,6 +23,6 @@ class Application extends Controller {
   val rnd = new Random
 
   def sensor(id: String) = Action {
-    Ok(Json.toJson(TempSensorData(id, DateTime.now, rnd.nextDouble()*100, rnd.nextDouble()*5)))
+    Ok(Json.toJson(TempSensorData(id, DateTime.now, rnd.nextDouble()*100, rnd.nextDouble()*5, "tadaa")))
   }
 }

@@ -1,7 +1,7 @@
 
 // @GENERATOR:play-routes-compiler
 // @SOURCE:I:/platform/playing-microservices/poll-api/conf/routes
-// @DATE:Wed Oct 14 10:35:42 EEST 2015
+// @DATE:Wed Oct 14 13:00:28 EEST 2015
 
 import play.api.routing.JavaScriptReverseRoute
 import play.api.mvc.{ QueryStringBindable, PathBindable, Call, JavascriptLiteral }
@@ -42,16 +42,22 @@ package controllers.javascript {
     }
 
   
-    // @LINE:7
+    // @LINE:8
     def restart: JavaScriptReverseRoute = JavaScriptReverseRoute(
       "controllers.Application.restart",
       """
         function() {
-        
-          if (true) {
-            return _wA({method:"GET", url:"""" + _prefix + { _defaultPrefix } + """" + "start"})
-          }
-        
+          return _wA({method:"GET", url:"""" + _prefix + { _defaultPrefix } + """" + "restart"})
+        }
+      """
+    )
+  
+    // @LINE:7
+    def start: JavaScriptReverseRoute = JavaScriptReverseRoute(
+      "controllers.Application.start",
+      """
+        function() {
+          return _wA({method:"GET", url:"""" + _prefix + { _defaultPrefix } + """" + "start"})
         }
       """
     )

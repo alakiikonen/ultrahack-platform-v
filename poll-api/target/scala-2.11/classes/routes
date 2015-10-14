@@ -4,7 +4,7 @@
 
 # Home page
 GET      /                       controllers.Application.index
-GET      /start                  controllers.Application.restart
+GET      /start                  controllers.Application.start
 GET      /restart                controllers.Application.restart
 GET      /stop                   controllers.Application.stopAll
 GET      /status                 controllers.Application.status

@@ -1,27 +1,32 @@
-/*package models
+package models
 
 import kafka.api.FetchRequestBuilder
 import kafka.consumer.SimpleConsumer
+import fi.platformv.KafkaConfig
 
-case class ChunkConsumer(topics: List[String], partition: Int = 0, offset: Long = 0L, fetchSize: Int = 100) extends Consumer(topics) {
+case class ChunkConsumer(topics: List[String], partition: Int = 1, offset: Long = 1L, fetchSize: Int = 100) extends Consumer(topics) {
 
-  private val clientId = kafkaConfig.getCustomString("consumer.clientId")
+  private val clientId = kafkaConfig.getProperty("clientId")
 
   val simpleConsumer = new SimpleConsumer(
-    kafkaConfig.getCustomString("consumer.host"),
-    kafkaConfig.getCustomInt("consumer.port"),
-    kafkaConfig.getCustomInt("consumer.timeOut"),
-    kafkaConfig.getCustomInt("consumer.bufferSize"),
+    kafkaConfig.getProperty("host"),
+    kafkaConfig.getProperty("port").toInt,
+    kafkaConfig.getProperty("timeOut").toInt,
+    kafkaConfig.getProperty("bufferSize").toInt,
     clientId)
+  
+  override def shutdown(): Unit = simpleConsumer.close()
 
   def read(): Iterable[String] = {
+    
     val fetchRequest = new FetchRequestBuilder().clientId(clientId)
+    
     for(topic <- topics) {
       fetchRequest.addFetch(topic, partition, offset, fetchSize)
     }
-
+    
     val fetchResponse = simpleConsumer.fetch(fetchRequest.build())
-
+    
     fetchResponse.data.values.flatMap { topic =>
       topic.messages.toList.map { mao =>
         val payload =  mao.message.payload
@@ -33,4 +38,4 @@ case class ChunkConsumer(topics: List[String], partition: Int = 0, offset: Long 
       }
     }
   }
-}*/
+}

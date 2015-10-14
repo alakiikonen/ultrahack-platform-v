@@ -14,6 +14,7 @@ import play.api.libs.json._
 
 object PollerActor {
   case class PollApi()
+  case class StopPollingId(id: String)
   case class StopPolling()
   case class GetStatus()
 
@@ -25,14 +26,14 @@ object PollerActor {
     "org.apache.kafka.common.serialization.StringSerializer")
 }
 
-class PollerActor(system: ActorSystem, ws: WSClient, poll: Poll) extends Actor {
+class PollerActor(system: ActorSystem, ws: WSClient, val poll: Poll) extends Actor {
   import PollerActor._
   import scala.concurrent.duration._
   import scala.concurrent.ExecutionContext.Implicits.global
   import scala.util.Random
-  
+
   private val rnd = new Random(DateTime.now.getMillis)
-  
+
   var total: Long = 0
   var success: Long = 0
   var lastWasSuccess: Boolean = false
@@ -55,6 +56,13 @@ class PollerActor(system: ActorSystem, ws: WSClient, poll: Poll) extends Actor {
           val message = new ProducerRecord[String, String](KafkaConstants.errorTopic, poll._id.get.stringify, Json.stringify(errorMessage))
           producer.send(message)
         }
+      }
+    }
+    case StopPollingId(id: String) => {
+      if (id == poll._id.get.stringify) {
+        println(s"Stop polling from api ${poll.api}")
+        cancellable.cancel()
+        context stop self
       }
     }
     case StopPolling => {

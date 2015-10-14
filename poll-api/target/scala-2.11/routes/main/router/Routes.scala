@@ -1,7 +1,7 @@
 
 // @GENERATOR:play-routes-compiler
 // @SOURCE:I:/platform/playing-microservices/poll-api/conf/routes
-// @DATE:Wed Oct 14 10:35:42 EEST 2015
+// @DATE:Wed Oct 14 13:00:28 EEST 2015
 
 package router
 
@@ -43,7 +43,7 @@ class Routes(
 
   def documentation = List(
     ("""GET""", this.prefix, """controllers.Application.index"""),
-    ("""GET""", this.prefix + (if(this.prefix.endsWith("/")) "" else "/") + """start""", """controllers.Application.restart"""),
+    ("""GET""", this.prefix + (if(this.prefix.endsWith("/")) "" else "/") + """start""", """controllers.Application.start"""),
     ("""GET""", this.prefix + (if(this.prefix.endsWith("/")) "" else "/") + """restart""", """controllers.Application.restart"""),
     ("""GET""", this.prefix + (if(this.prefix.endsWith("/")) "" else "/") + """stop""", """controllers.Application.stopAll"""),
     ("""GET""", this.prefix + (if(this.prefix.endsWith("/")) "" else "/") + """status""", """controllers.Application.status"""),
@@ -76,15 +76,15 @@ class Routes(
   )
 
   // @LINE:7
-  private[this] lazy val controllers_Application_restart1_route = Route("GET",
+  private[this] lazy val controllers_Application_start1_route = Route("GET",
     PathPattern(List(StaticPart(this.prefix), StaticPart(this.defaultPrefix), StaticPart("start")))
   )
-  private[this] lazy val controllers_Application_restart1_invoker = createInvoker(
-    Application_1.restart,
+  private[this] lazy val controllers_Application_start1_invoker = createInvoker(
+    Application_1.start,
     HandlerDef(this.getClass.getClassLoader,
       "router",
       "controllers.Application",
-      "restart",
+      "start",
       Nil,
       "GET",
       """""",
@@ -221,9 +221,9 @@ class Routes(
       }
   
     // @LINE:7
-    case controllers_Application_restart1_route(params) =>
+    case controllers_Application_start1_route(params) =>
       call { 
-        controllers_Application_restart1_invoker.call(Application_1.restart)
+        controllers_Application_start1_invoker.call(Application_1.start)
       }
   
     // @LINE:8

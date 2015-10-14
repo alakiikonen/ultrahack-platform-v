@@ -17,50 +17,57 @@ import scala.concurrent.Future
 class DispatcherActor @Inject() (system: ActorSystem, ws: WSClient) extends Actor {
   import scala.concurrent.duration._
   import DispatcherActor._
-  import PollerActor._
-
-  var pollerActors = Map[ActorRef, Poll]()
 
   def receive = {
+
     case RestartPolling(polls: List[Poll]) => {
-      println(s"Start polling")
       stopAll
+      self ! StartPolling(polls)
+    }
+
+    case StartPolling(polls: List[Poll]) => {
       polls foreach { poll =>
         if (poll._id.isDefined && poll.active) {
+          stopById(poll._id.get.stringify)
           val pollActor = context.actorOf(Props(new PollerActor(system, ws, poll)))
-          pollerActors += Tuple2(pollActor, poll)
         }
       }
     }
+
     case StopPollingId(id: String) => {
-      println(s"stop polling id $id")
-      pollerActors = tryRemovePoller(pollerActors, id)
+      stopById(id)
     }
-    
+
     case StopPollingAll => {
       stopAll
     }
-    
+
     case GetStatuses => {
-      sender() ! Future.sequence(pollerActors.map { actor => 
+      sender() ! Future.sequence(context.children.map { actor =>
         implicit val timeout: akka.util.Timeout = 3.seconds
-        (actor._1 ? GetStatus).mapTo[PollStatus]
+        (actor ? PollerActor.GetStatus).mapTo[PollStatus]
       })
     }
-    
+
   }
 
-  private def stopAll = {
+  private def stopAll {
     println("stop polling")
-    pollerActors foreach { a =>
-      a._1 ! PollerActor.StopPolling
+    context.children foreach { child =>
+      child ! PollerActor.StopPolling
     }
-    pollerActors = pollerActors.empty
+  }
+
+  private def stopById(id: String) {
+    context.children.foreach { actor =>
+      actor ! PollerActor.StopPollingId(id)
+    }
   }
 }
 
 object DispatcherActor {
   case class RestartPolling(polls: List[Poll])
+  case class StartPolling(polls: List[Poll])
   case class StopPollingId(id: String)
   case class StopPollingAll()
   case class GetStatuses()

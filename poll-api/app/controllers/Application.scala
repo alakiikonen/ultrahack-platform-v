@@ -1,51 +1,49 @@
 package controllers
 
-import play.api._
-import play.api.mvc._
-
 import scala.concurrent.Future.{ successful => resolve }
-import play.api.libs.json._
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
-import akka.actor._
-import javax.inject._
-import actors._
-import actors.DispatcherActor._
-import play.api.Play.current
-import models._
-import dao._
+import dao.PollDao
+import javax.inject.Inject
+import javax.inject.Singleton
+import models.Poll
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.libs.json.JsError
+import play.api.libs.json.Json
+import play.api.libs.json.Json.toJsFieldJsValueWrapper
+import play.api.mvc.Action
+import play.api.mvc.Controller
 import reactivemongo.bson.BSONObjectID
-import akka.pattern.ask
-import scala.concurrent.duration._
-import scala.concurrent.Future
+import utils.DispatcherHelper
 
 @Singleton
-class Application @Inject() (system: ActorSystem, pollDao: PollDao) extends Controller {
-
-  private val dispatcherActor = system.actorOf(Props(current.injector.instanceOf[DispatcherActor]), "dispatcher-actor")
+class Application @Inject() (pollDao: PollDao, dispatcherHelper: DispatcherHelper) extends Controller {
 
   def index = Action {
     Ok("index")
   }
 
-  def status = Action.async(parse.empty) { request =>
-    implicit val timeout: akka.util.Timeout = 5.seconds
-    (dispatcherActor ? GetStatuses).mapTo[Future[List[PollStatus]]] flatMap { statusesFuture =>
-      statusesFuture.map { statuses => 
-        Ok(Json.toJson(statuses))
-      }
+  def status = Action.async(parse.empty) { request => 
+    dispatcherHelper.getStatus map { statuses => 
+       Ok(Json.toJson(statuses))
+    }
+  }
+  
+  def start = Action.async(parse.empty) { request =>
+    pollDao.findAll map { polls =>
+      dispatcherHelper.startPolling(polls)
+      Ok("started")
     }
   }
 
   def restart = Action.async(parse.empty) { request =>
     pollDao.findAll map { polls =>
-      dispatcherActor ! RestartPolling(polls)
+      dispatcherHelper.restartPolling(polls)
       Ok("restarted")
     }
   }
 
   def stopAll = Action {
-    dispatcherActor ! StopPollingAll
+    dispatcherHelper.stopAll
     Ok("stopped all")
   }
 

@@ -14,8 +14,10 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 import models.Poll
+import utils.DispatcherHelper
 
-class PollDao @Inject() (val reactiveMongoApi: ReactiveMongoApi) {
+@Singleton
+class PollDao @Inject() (val reactiveMongoApi: ReactiveMongoApi, dispatcherHelper: DispatcherHelper) {
 
   private def collection = reactiveMongoApi.db.collection[JSONCollection]("polls")
 
@@ -25,7 +27,10 @@ class PollDao @Inject() (val reactiveMongoApi: ReactiveMongoApi) {
       changed = Some(DateTime.now),
       created = Some(poll.created.getOrElse((DateTime.now))))
     val selector = Json.obj("_id" -> p._id.get)
-    collection.update(selector, p, upsert = true)
+    collection.update(selector, p, upsert = true).map { updateWriteResult =>
+      if (updateWriteResult.ok) dispatcherHelper.startPolling(List(p))
+      updateWriteResult
+    }
   }
 
   def findAll = {
@@ -36,6 +41,9 @@ class PollDao @Inject() (val reactiveMongoApi: ReactiveMongoApi) {
 
   def remove(id: BSONObjectID) = {
     val selector = Json.obj("_id" -> id)
-    collection.remove(selector)
+    collection.remove(selector).map { updateWriteResult =>
+      if (updateWriteResult.ok) dispatcherHelper.stopById(id.stringify)
+      updateWriteResult
+    }
   }
 }

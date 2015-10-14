@@ -16,10 +16,8 @@ trait KafkaConfig extends Properties {
   allKeys.map { key =>
     if (typesafeConfig.hasPath(key))
       put(key.replace(consumerPrefixWithDot, "").replace(producerPrefixWithDot, ""), typesafeConfig.getString(key))
-  }
+  }*/
 
-  def getCustomString(key: String) = typesafeConfig.getString(key)
-  def getCustomInt(key: String) = typesafeConfig.getInt(key)*/
   put("group.id", "test")
   put("zookeeper.connect", "localhost:2181")
   put("host", "localhost")

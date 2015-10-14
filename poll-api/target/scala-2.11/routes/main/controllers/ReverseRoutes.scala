@@ -1,7 +1,7 @@
 
 // @GENERATOR:play-routes-compiler
 // @SOURCE:I:/platform/playing-microservices/poll-api/conf/routes
-// @DATE:Wed Oct 14 10:35:42 EEST 2015
+// @DATE:Wed Oct 14 13:00:28 EEST 2015
 
 import play.api.mvc.{ QueryStringBindable, PathBindable, Call, JavascriptLiteral }
 import play.core.routing.{ HandlerDef, ReverseRouteContext, queryString, dynamicString }
@@ -34,18 +34,16 @@ package controllers {
     }
 
   
-    // @LINE:7
+    // @LINE:8
     def restart(): Call = {
-    
-      () match {
-      
-        // @LINE:7
-        case ()  =>
-          import ReverseRouteContext.empty
-          Call("GET", _prefix + { _defaultPrefix } + "start")
-      
-      }
-    
+      import ReverseRouteContext.empty
+      Call("GET", _prefix + { _defaultPrefix } + "restart")
+    }
+  
+    // @LINE:7
+    def start(): Call = {
+      import ReverseRouteContext.empty
+      Call("GET", _prefix + { _defaultPrefix } + "start")
     }
   
     // @LINE:12

@@ -1,7 +1,7 @@
 package models
 
-import kafka.consumer.{Consumer => KafkaConsumer, ConsumerIterator, Whitelist}
-import kafka.serializer.{DefaultDecoder, Decoder}
+import kafka.consumer.{ Consumer => KafkaConsumer, ConsumerIterator, Whitelist }
+import kafka.serializer.{ DefaultDecoder, Decoder }
 import scala.collection.JavaConversions._
 
 case class StreamConsumer(topics: List[String]) extends Consumer(topics) {
@@ -13,6 +13,8 @@ case class StreamConsumer(topics: List[String]) extends Consumer(topics) {
 
   private lazy val consumer = KafkaConsumer.create(config)
   private lazy val stream = consumer.createMessageStreamsByFilter(filterSpec, 1, keyDecoder, valueDecoder).get(0)
+  
+  override def shutdown(): Unit = consumer.shutdown()
 
   def read(): Stream[String] = Stream.cons(new String(stream.head.message()), read())
 }
@@ -31,5 +33,7 @@ case class SingleTopicConsumer(topic: String) extends Consumer(List(topic)) {
   private lazy val consumerMap = consumer.createMessageStreams(Map(topic -> threadNum))
   private lazy val stream = consumerMap.getOrElse(topic, List()).head
 
+  override def shutdown(): Unit = consumer.shutdown()
+  
   override def read(): Stream[String] = Stream.cons(new String(stream.head.message()), read())
 }
