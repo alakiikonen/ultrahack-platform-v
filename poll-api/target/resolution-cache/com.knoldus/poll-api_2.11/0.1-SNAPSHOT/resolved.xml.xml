@@ -4,7 +4,7 @@
 		module="poll-api_2.11"
 		revision="0.1-SNAPSHOT"
 		status="integration"
-		publication="20151014080856"
+		publication="20151015082205"
 	>
 		<description>
 		poll-api

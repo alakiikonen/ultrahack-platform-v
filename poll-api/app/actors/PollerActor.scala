@@ -12,11 +12,14 @@ import org.joda.time.DateTime
 import fi.platformv.KafkaConstants
 import play.api.libs.json._
 
+import fi.platformv.actors.SpawnActorBase
+import fi.platformv.actors.DispatcherActorBase.{ StopActors, StopActor, GetStatus }
+import fi.platformv.models.ActorStatus
+
+import java.util.concurrent.TimeoutException
+
 object PollerActor {
   case class PollApi()
-  case class StopPollingId(id: String)
-  case class StopPolling()
-  case class GetStatus()
 
   val kafkaProps = new HashMap[String, Object]()
   kafkaProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092")
@@ -26,7 +29,7 @@ object PollerActor {
     "org.apache.kafka.common.serialization.StringSerializer")
 }
 
-class PollerActor(system: ActorSystem, ws: WSClient, val poll: Poll) extends Actor {
+class PollerActor(system: ActorSystem, ws: WSClient, poll: Poll) extends SpawnActorBase(poll) {
   import PollerActor._
   import scala.concurrent.duration._
   import scala.concurrent.ExecutionContext.Implicits.global
@@ -44,7 +47,7 @@ class PollerActor(system: ActorSystem, ws: WSClient, val poll: Poll) extends Act
   def receive = {
     case PollApi => {
       total += 1
-      ws.url(poll.api).withRequestTimeout(poll.interval).get().map { response =>
+      ws.url(poll.api).withRequestTimeout(poll.interval - 1).get().map { response =>
         if (Set(200, 201, 202, 203, 204, 205, 206).contains(response.status)) {
           success += 1
           lastWasSuccess = true
@@ -52,26 +55,39 @@ class PollerActor(system: ActorSystem, ws: WSClient, val poll: Poll) extends Act
           producer.send(message)
         } else {
           lastWasSuccess = false
-          val errorMessage = Json.obj("errorType" -> "poll-api-request-failed", "time" -> DateTime.now, "poll" -> poll, "response" -> Json.obj("status" -> response.status, "body" -> response.body))
-          val message = new ProducerRecord[String, String](KafkaConstants.errorTopic, poll._id.get.stringify, Json.stringify(errorMessage))
+          val errorMessage = Json.obj("errorType" -> "invalidStatus", "time" -> DateTime.now, "poll" -> poll, "response" -> Json.obj("status" -> response.status, "body" -> response.body))
+          val message = new ProducerRecord[String, String](KafkaConstants.POLL_ERROR_TOPIC, poll._id.get.stringify, Json.stringify(errorMessage))
           producer.send(message)
         }
+      } recover {
+        case t: TimeoutException => {
+          val errorMessage = Json.obj("errorType" -> "timeout", "time" -> DateTime.now, "poll" -> poll, "msg" -> t.getMessage)
+          val message = new ProducerRecord[String, String](KafkaConstants.POLL_ERROR_TOPIC, poll._id.get.stringify, Json.stringify(errorMessage))
+          producer.send(message)
+        }
+        case e =>
+          val errorMessage = Json.obj("errorType" -> "unknown", "time" -> DateTime.now, "poll" -> poll, "msg" -> e.getMessage)
+          val message = new ProducerRecord[String, String](KafkaConstants.POLL_ERROR_TOPIC, poll._id.get.stringify, Json.stringify(errorMessage))
+          producer.send(message)
       }
     }
-    case StopPollingId(id: String) => {
+
+    case StopActor(id: String) => {
       if (id == poll._id.get.stringify) {
         println(s"Stop polling from api ${poll.api}")
         cancellable.cancel()
         context stop self
       }
     }
-    case StopPolling => {
+
+    case StopActors => {
       println(s"Stop polling from api ${poll.api}")
       cancellable.cancel()
       context stop self
     }
+
     case GetStatus => {
-      sender() ! PollStatus(poll.api, success, total, lastWasSuccess)
+      sender() ! ActorStatus(poll.id, poll.active, !lastWasSuccess, success, total, Json.obj("api" -> poll.api))
     }
   }
 }

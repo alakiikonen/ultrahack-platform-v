@@ -1,7 +1,5 @@
 package fi.platformv
 
 object KafkaConstants {
-  val errorTopic = "error"
-  
-  
+  final val POLL_ERROR_TOPIC = "poll-error"
 }

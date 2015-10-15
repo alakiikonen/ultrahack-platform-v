@@ -22,12 +22,12 @@ class Application @Inject() (pollDao: PollDao, dispatcherHelper: DispatcherHelpe
     Ok("index")
   }
 
-  def status = Action.async(parse.empty) { request => 
-    dispatcherHelper.getStatus map { statuses => 
-       Ok(Json.toJson(statuses))
+  def status = Action.async(parse.empty) { request =>
+    dispatcherHelper.getStatus map { statuses =>
+      Ok(Json.toJson(statuses))
     }
   }
-  
+
   def start = Action.async(parse.empty) { request =>
     pollDao.findAll map { polls =>
       dispatcherHelper.startPolling(polls)
