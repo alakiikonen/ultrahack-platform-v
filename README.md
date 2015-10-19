@@ -1,5 +1,11 @@
-[playing-microservices](http://blog.knoldus.com/2015/06/15/play-microservice-architecture/)
+Data Visualization Platform V
 =================================
+
+Kafka based data visualization and prosessing platform utilizing microservices architecture.
+
+![alt tag](/web/public/images/dataVisuPlatformArkkitehtuuri.png)
+
+---
 
 This repository describes a basic Microservice architecture design using Play 2.4.X and Scala. The big idea behind microservices is to architect large, complex and long-lived applications as a set of cohesive services that evolve over time. The term microservices strongly suggests that the services should be small.
 
@@ -43,3 +49,4 @@ $ ./activator "project <service-name>" "run <PORT>"
 * [Play Framework](http://www.playframework.com/)
 * [Microservices](http://martinfowler.com/articles/microservices.html)
 * [Microservices: Decomposing Applications](http://www.infoq.com/articles/microservices-intro)
+* [playing-microservices](http://blog.knoldus.com/2015/06/15/play-microservice-architecture/)
