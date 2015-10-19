@@ -20,6 +20,13 @@ import utils.DispatcherHelper
 class PersistenceDao @Inject() (val reactiveMongoApi: ReactiveMongoApi, dispatcherHelper: DispatcherHelper) {
 
   private def collection = reactiveMongoApi.db.collection[JSONCollection]("persistence")
+  
+  def ensureIndexes() = {
+    import reactivemongo.api.indexes.{ Index, IndexType}
+    val idIndex = new Index(Seq(("id", IndexType.Ascending)), None, true)
+    collection.indexesManager.ensure(idIndex)
+  }
+  ensureIndexes()
 
   def save(persistenceMap: PersistenceMap) = {
     val p = persistenceMap.copy(
@@ -28,7 +35,7 @@ class PersistenceDao @Inject() (val reactiveMongoApi: ReactiveMongoApi, dispatch
       created = Some(persistenceMap.created.getOrElse((DateTime.now))))
     val selector = Json.obj("_id" -> p._id.get)
     collection.update(selector, p, upsert = true).map { updateWriteResult =>
-      if (updateWriteResult.ok) dispatcherHelper.startWriting(List(p))
+      if (updateWriteResult.ok) dispatcherHelper.start(List(p))
       updateWriteResult
     }
   }
@@ -39,10 +46,10 @@ class PersistenceDao @Inject() (val reactiveMongoApi: ReactiveMongoApi, dispatch
       .collect[List]()
   }
 
-  def remove(id: BSONObjectID) = {
-    val selector = Json.obj("_id" -> id)
+  def remove(id: String) = {
+    val selector = Json.obj("id" -> id)
     collection.remove(selector).map { updateWriteResult =>
-      if (updateWriteResult.ok) dispatcherHelper.stopById(id.stringify)
+      if (updateWriteResult.ok) dispatcherHelper.stopById(id)
       updateWriteResult
     }
   }

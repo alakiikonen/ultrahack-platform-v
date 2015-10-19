@@ -1,42 +1,27 @@
 package utils
 
-import javax.inject._
-import actors._
-import actors.PollDispatcherActor
-import akka.actor._
-import play.api.Play.current
-import scala.concurrent.duration._
-import akka.pattern.ask
-import scala.concurrent.Future
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import models._ 
-
-import fi.platformv.actors.DispatcherActorBase._
-import fi.platformv.models.ActorStatus
+import actors.PollActorDispatcher
+import actors.PollActorDispatcher.RestartActors
+import actors.PollActorDispatcher.StartActors
+import akka.actor.ActorSystem
+import akka.actor.actorRef2Scala
+import javax.inject.Inject
+import javax.inject.Singleton
+import models.Poll
 
 @Singleton
-class DispatcherHelper @Inject() (system: ActorSystem) {
+class DispatcherHelper @Inject() (system: ActorSystem) extends DispatcherHelperBase[Poll] {
   
-  private val pollDispatcherActor = system.actorOf(Props(current.injector.instanceOf[PollDispatcherActor]), "dispatcher-actor")
+  private lazy val dispatcher = system.actorOf(PollActorDispatcher.props)
   
-  def getStatus: Future[List[ActorStatus]] = {
-    implicit val timeout: akka.util.Timeout = 10.seconds
-    (pollDispatcherActor ? GetStatuses).mapTo[Future[List[ActorStatus]]] flatMap(l => l)
+  override def dispatcherActor = dispatcher
+  
+  def start(items: List[Poll]) = {
+    dispatcherActor ! StartActors(items)
   }
   
-  def startPolling(polls: List[Poll]) = {
-    pollDispatcherActor ! StartActors(polls)
-  }
-  
-  def restartPolling(polls: List[Poll]) = {
-    pollDispatcherActor ! RestartActors(polls)
-  }
-  
-  def stopAll = {
-    pollDispatcherActor ! StopActors
-  }
-  
-  def stopById(id: String) = {
-    pollDispatcherActor ! StopActor(id)
+  def restart(items: List[Poll]) = {
+    dispatcherActor ! RestartActors(items)
   }
 }
+

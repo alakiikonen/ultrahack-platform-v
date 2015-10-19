@@ -1,6 +1,6 @@
 package models
 
-import fi.platformv.KafkaConfig
+/*import fi.platformv.KafkaConfig
 import kafka.consumer.ConsumerConfig
 
 abstract class Consumer(topics: List[String]) {
@@ -11,4 +11,4 @@ abstract class Consumer(topics: List[String]) {
   def shutdown(): Unit
 
   def read(): Iterable[String]
-}
+}*/

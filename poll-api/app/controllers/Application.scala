@@ -30,14 +30,14 @@ class Application @Inject() (pollDao: PollDao, dispatcherHelper: DispatcherHelpe
 
   def start = Action.async(parse.empty) { request =>
     pollDao.findAll map { polls =>
-      dispatcherHelper.startPolling(polls)
+      dispatcherHelper.start(polls)
       Ok("started")
     }
   }
 
   def restart = Action.async(parse.empty) { request =>
     pollDao.findAll map { polls =>
-      dispatcherHelper.restartPolling(polls)
+      dispatcherHelper.restart(polls)
       Ok("restarted")
     }
   }
@@ -61,13 +61,9 @@ class Application @Inject() (pollDao: PollDao, dispatcherHelper: DispatcherHelpe
   }
 
   def deletePoll(id: String) = Action.async(parse.empty) { request =>
-    BSONObjectID.parse(id) map { id =>
-      pollDao.remove(id).map {
-        case updateWriteResult if updateWriteResult.ok => Ok("Done")
-        case updateWriteResult                         => InternalServerError(s"Fail")
-      }
-    } getOrElse {
-      resolve(BadRequest("invalid id"))
+    pollDao.remove(id).map {
+      case updateWriteResult if updateWriteResult.ok => Ok("Done")
+      case updateWriteResult                         => InternalServerError(s"Fail")
     }
   }
 

@@ -3,7 +3,7 @@ import Keys._
 
 object Dependencies {
 
-  val scala = "2.11.6"
+  val scala = "2.11.7"
 
   val resolvers = DefaultOptions.resolvers(snapshot = true) ++ Seq(
     "scalaz-releases" at "http://dl.bintray.com/scalaz/releases"
@@ -34,13 +34,15 @@ object Dependencies {
   val scalatest      = "org.scalatest"       %% "scalatest"                % "2.2.4"            % "test"
   val kafka          = "org.apache.kafka"    %% "kafka"                    % "0.8.2.1"
   val reactivemongo  = "org.reactivemongo"   %% "play2-reactivemongo"      % "0.11.7.play24"
+  val typesafeConfig = "com.typesafe"        %  "config"                   % "1.3.0"
 
   val playDependencies: Seq[ModuleID] = Seq(
     playframework.jdbc,
     playframework.cache,
     playframework.ws,
     playframework.json,
-    playframework.specs2
+    playframework.specs2,
+    typesafeConfig
   )
 
   val webjarsDependencies: Seq[ModuleID] = playDependencies ++ Seq(

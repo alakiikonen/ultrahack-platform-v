@@ -1,48 +1,47 @@
 package actors
 
-import play.api.mvc._
-import akka.actor._
-import javax.inject._
-import org.apache.kafka.clients.producer.{ ProducerConfig, KafkaProducer, ProducerRecord }
-import java.util.HashMap
-import kafka.serializer.StringDecoder
-import play.api.libs.ws._
-import models._
-import org.joda.time.DateTime
-import fi.platformv.KafkaConstants
-import play.api.libs.json._
-
-import fi.platformv.actors.SpawnActorBase
-import fi.platformv.actors.DispatcherActorBase.{ StopActors, StopActor, GetStatus }
-import fi.platformv.models.ActorStatus
-
 import java.util.concurrent.TimeoutException
+
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration.DurationInt
+import scala.concurrent.duration.DurationLong
+import scala.util.Random
+
+import org.apache.kafka.clients.producer.ProducerRecord
+import org.joda.time.DateTime
+
+import PollerActor.PollApi
+import akka.actor.Actor
+import akka.actor.ActorSystem
+import akka.actor.actorRef2Scala
+import fi.platformv.actors.ActorDispatcher.GetActorStatus
+import fi.platformv.models.ActorStatus
+import fi.platformv.models.KafkaErrorMessage
+import fi.platformv.models.KafkaErrorType
+import fi.platformv.utils.KafkaConstants
+import models.Poll
+import play.api.Play.current
+import play.api.libs.json.Json
+import play.api.libs.json.Json.toJsFieldJsValueWrapper
+import play.api.libs.ws.WSClient
 
 object PollerActor {
   case class PollApi()
-
-  val kafkaProps = new HashMap[String, Object]()
-  kafkaProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092")
-  kafkaProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
-    "org.apache.kafka.common.serialization.StringSerializer")
-  kafkaProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,
-    "org.apache.kafka.common.serialization.StringSerializer")
+  final val SOURCE_TYPE = "poller-actor"
 }
 
-class PollerActor(system: ActorSystem, ws: WSClient, poll: Poll) extends SpawnActorBase(poll) {
-  import PollerActor._
-  import scala.concurrent.duration._
-  import scala.concurrent.ExecutionContext.Implicits.global
-  import scala.util.Random
-
+class PollerActor(poll: Poll) extends Actor { 
   private val rnd = new Random(DateTime.now.getMillis)
+  
+  private val ws = current.injector.instanceOf[WSClient]
 
-  var total: Long = 0
-  var success: Long = 0
-  var lastWasSuccess: Boolean = false
-
-  val producer = new KafkaProducer[String, String](kafkaProps)
-  val cancellable = system.scheduler.schedule((rnd.nextInt(1000)).milliseconds, poll.interval.milliseconds, self, PollApi)
+  private var total: Long = 0
+  private var success: Long = 0
+  private var lastWasSuccess: Boolean = false
+  
+  private val producer = fi.platformv.models.Producer[String](poll.kafkaTopic)
+  
+  private val cancellable = context.system.scheduler.schedule((rnd.nextInt(1000)).milliseconds, poll.interval.milliseconds, self, PollApi)
 
   def receive = {
     case PollApi => {
@@ -52,42 +51,31 @@ class PollerActor(system: ActorSystem, ws: WSClient, poll: Poll) extends SpawnAc
           success += 1
           lastWasSuccess = true
           val message = new ProducerRecord[String, String](poll.kafkaTopic, poll._id.get.stringify, response.body)
-          producer.send(message)
+          producer.sendWithKey(response.body, poll._id.get.stringify)
         } else {
           lastWasSuccess = false
-          val errorMessage = Json.obj("errorType" -> "invalidStatus", "time" -> DateTime.now, "poll" -> poll, "response" -> Json.obj("status" -> response.status, "body" -> response.body))
-          val message = new ProducerRecord[String, String](KafkaConstants.POLL_ERROR_TOPIC, poll._id.get.stringify, Json.stringify(errorMessage))
-          producer.send(message)
+          context.parent ! KafkaErrorMessage(KafkaErrorType.INVALID_RESPONSE_STATUS, response.status.toString, PollerActor.SOURCE_TYPE, poll.id, DateTime.now, Some(Json.obj("body" -> response.body)))
         }
       } recover {
         case t: TimeoutException => {
-          val errorMessage = Json.obj("errorType" -> "timeout", "time" -> DateTime.now, "poll" -> poll, "msg" -> t.getMessage)
-          val message = new ProducerRecord[String, String](KafkaConstants.POLL_ERROR_TOPIC, poll._id.get.stringify, Json.stringify(errorMessage))
-          producer.send(message)
+          lastWasSuccess = false
+          context.parent ! KafkaErrorMessage(KafkaErrorType.TIMEOUT, t.getMessage, PollerActor.SOURCE_TYPE, poll.id, DateTime.now, None)
         }
-        case e =>
-          val errorMessage = Json.obj("errorType" -> "unknown", "time" -> DateTime.now, "poll" -> poll, "msg" -> e.getMessage)
-          val message = new ProducerRecord[String, String](KafkaConstants.POLL_ERROR_TOPIC, poll._id.get.stringify, Json.stringify(errorMessage))
-          producer.send(message)
+        case e => {
+          lastWasSuccess = false
+          context.parent ! KafkaErrorMessage(KafkaErrorType.SERVICE_UNAVAILABLE, e.getMessage, PollerActor.SOURCE_TYPE, poll.id, DateTime.now, None)
+        }
       }
     }
 
-    case StopActor(id: String) => {
-      if (id == poll._id.get.stringify) {
-        println(s"Stop polling from api ${poll.api}")
-        cancellable.cancel()
-        context stop self
-      }
+    case GetActorStatus => {
+      sender() ! ActorStatus(poll.id, poll.active, !lastWasSuccess, success, total, Json.obj("api" -> poll.api, "topic" -> poll.kafkaTopic))
     }
+  }
 
-    case StopActors => {
-      println(s"Stop polling from api ${poll.api}")
-      cancellable.cancel()
-      context stop self
-    }
-
-    case GetStatus => {
-      sender() ! ActorStatus(poll.id, poll.active, !lastWasSuccess, success, total, Json.obj("api" -> poll.api))
-    }
+  override def postStop(): Unit = {
+    println(s"stop actor ${poll.id}")
+    cancellable.cancel()
+    producer.close()
   }
 }

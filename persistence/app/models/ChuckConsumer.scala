@@ -1,5 +1,5 @@
 package models
-
+/*
 import kafka.api.FetchRequestBuilder
 import kafka.consumer.SimpleConsumer
 import fi.platformv.KafkaConfig
@@ -39,3 +39,4 @@ case class ChunkConsumer(topics: List[String], partition: Int = 1, offset: Long 
     }
   }
 }
+*/

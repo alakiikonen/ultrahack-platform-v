@@ -1,39 +1,27 @@
 package utils
 
-import javax.inject._
-import actors._
-import actors.DispatcherActor
-import akka.actor._
-import play.api.Play.current
-import scala.concurrent.duration._
-import akka.pattern.ask
-import scala.concurrent.Future
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import models._
+import actors.PersistenceActorDispatcher
+import actors.PersistenceActorDispatcher.RestartActors
+import actors.PersistenceActorDispatcher.StartActors
+import akka.actor.ActorSystem
+import akka.actor.actorRef2Scala
+import javax.inject.Inject
+import javax.inject.Singleton
+import models.PersistenceMap
 
 @Singleton
-class DispatcherHelper @Inject() (system: ActorSystem) {
-
-  private val dispatcherActor = system.actorOf(Props(current.injector.instanceOf[DispatcherActor]), "dispatcher-actor")
-
-  /*def getStatus: Future[List[PollStatus]] = {
-    implicit val timeout: akka.util.Timeout = 5.seconds
-    (dispatcherActor ? DispatcherActor.GetStatuses).mapTo[Future[List[PollStatus]]] flatMap(l => l)
-  }*/
-
-  def startWriting(persistenceMaps: List[PersistenceMap]) = {
-    dispatcherActor ! DispatcherActor.Start(persistenceMaps)
+class DispatcherHelper @Inject() (system: ActorSystem) extends DispatcherHelperBase[PersistenceMap] {
+  
+  private lazy val dispatcher = system.actorOf(PersistenceActorDispatcher.props)
+  
+  override def dispatcherActor = dispatcher
+  
+  def start(items: List[PersistenceMap]) = {
+    dispatcherActor ! StartActors(items)
   }
   
-  def restartWriting(persistenceMaps: List[PersistenceMap]) = {
-    dispatcherActor ! DispatcherActor.Restart(persistenceMaps)
-  }
-
-  def stopAll = {
-    dispatcherActor ! DispatcherActor.StopAll
-  }
-
-  def stopById(id: String) = {
-    dispatcherActor ! DispatcherActor.Stop(id)
+  def restart(items: List[PersistenceMap]) = {
+    dispatcherActor ! RestartActors(items)
   }
 }
+

@@ -18,21 +18,27 @@ import reactivemongo.bson.BSONObjectID
 
 @Singleton
 class Application @Inject() (system: ActorSystem, persistenceDao: PersistenceDao, dispatcherHelper: DispatcherHelper) extends Controller {
-  
+
   def index = Action {
     Ok("index")
   }
   
+  def status = Action.async(parse.empty) { request =>
+    dispatcherHelper.getStatus map { statuses =>
+      Ok(Json.toJson(statuses))
+    }
+  }
+
   def restart = Action.async(parse.empty) { request =>
     persistenceDao.findAll map { persistenceMaps =>
-      dispatcherHelper.restartWriting(persistenceMaps)
+      dispatcherHelper.restart(persistenceMaps)
       Ok("restarted")
     }
   }
 
   def start = Action.async(parse.empty) { request =>
     persistenceDao.findAll map { persistenceMaps =>
-      dispatcherHelper.startWriting(persistenceMaps)
+      dispatcherHelper.start(persistenceMaps)
       Ok("started")
     }
   }
@@ -56,13 +62,9 @@ class Application @Inject() (system: ActorSystem, persistenceDao: PersistenceDao
   }
 
   def deletePersistenceMap(id: String) = Action.async(parse.empty) { request =>
-    BSONObjectID.parse(id) map { id =>
-      persistenceDao.remove(id).map {
-        case updateWriteResult if updateWriteResult.ok => Ok("Done")
-        case updateWriteResult                         => InternalServerError(s"Fail")
-      }
-    } getOrElse {
-      resolve(BadRequest("invalid id"))
+    persistenceDao.remove(id).map {
+      case updateWriteResult if updateWriteResult.ok => Ok("Done")
+      case updateWriteResult                         => InternalServerError(s"Fail")
     }
   }
 

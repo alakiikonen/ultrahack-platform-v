@@ -18,12 +18,13 @@ val scoverageSettings = Seq(
 
 lazy val root = (
   project.in(file("."))
-  aggregate(common, persistence, api, web, pollApi, serviceB, serviceC, serviceD)
+  aggregate(common, persistence, pollApi, api, web, serviceTemplate)
 )
 
 lazy val common = (
   BaseProject("common")
   settings(libraryDependencies ++= playDependencies)
+  settings(libraryDependencies ++= kafkaDependencies)
   settings(scoverageSettings: _*)
 )
 
@@ -44,22 +45,8 @@ lazy val pollApi = (
   settings(scoverageSettings: _*)
 ) dependsOn(common)
 
-lazy val serviceB = (
-  PlayProject("service-b")
-  settings(libraryDependencies ++= playDependencies)
-  settings(routesGenerator := InjectedRoutesGenerator)
-  settings(scoverageSettings: _*)
-) dependsOn(common)
-
-lazy val serviceC = (
-  PlayProject("service-c")
-  settings(libraryDependencies ++= playDependencies)
-  settings(routesGenerator := InjectedRoutesGenerator)
-  settings(scoverageSettings: _*)
-) dependsOn(common)
-
-lazy val serviceD = (
-  PlayProject("service-d")
+lazy val serviceTemplate = (
+  PlayProject("service-template")
   settings(libraryDependencies ++= playDependencies)
   settings(routesGenerator := InjectedRoutesGenerator)
   settings(scoverageSettings: _*)
@@ -70,7 +57,7 @@ lazy val api = (
   settings(libraryDependencies ++= playDependencies)
   settings(routesGenerator := InjectedRoutesGenerator)
   settings(scoverageSettings: _*)
-) dependsOn(common)
+)
 
 lazy val web = (
   PlayProject("web")

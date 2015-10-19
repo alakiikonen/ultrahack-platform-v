@@ -20,6 +20,13 @@ import utils.DispatcherHelper
 class PollDao @Inject() (val reactiveMongoApi: ReactiveMongoApi, dispatcherHelper: DispatcherHelper) {
 
   private def collection = reactiveMongoApi.db.collection[JSONCollection]("polls")
+  
+  def ensureIndexes() = {
+    import reactivemongo.api.indexes.{ Index, IndexType}
+    val idIndex = new Index(Seq(("id", IndexType.Ascending)), None, true)
+    collection.indexesManager.ensure(idIndex)
+  }
+  ensureIndexes()
 
   def save(poll: Poll) = {
     val p = poll.copy(
@@ -28,7 +35,7 @@ class PollDao @Inject() (val reactiveMongoApi: ReactiveMongoApi, dispatcherHelpe
       created = Some(poll.created.getOrElse((DateTime.now))))
     val selector = Json.obj("_id" -> p._id.get)
     collection.update(selector, p, upsert = true).map { updateWriteResult =>
-      if (updateWriteResult.ok) dispatcherHelper.startPolling(List(p))
+      if (updateWriteResult.ok) dispatcherHelper.start(List(p))
       updateWriteResult
     }
   }
@@ -39,10 +46,10 @@ class PollDao @Inject() (val reactiveMongoApi: ReactiveMongoApi, dispatcherHelpe
       .collect[List]()
   }
 
-  def remove(id: BSONObjectID) = {
-    val selector = Json.obj("_id" -> id)
-    collection.remove(selector).map { updateWriteResult =>
-      if (updateWriteResult.ok) dispatcherHelper.stopById(id.stringify)
+  def remove(id: String) = {
+    val selector = Json.obj("id" -> id)
+    collection.remove(selector, firstMatchOnly = true).map { updateWriteResult =>
+      if (updateWriteResult.ok) dispatcherHelper.stopById(id)
       updateWriteResult
     }
   }
