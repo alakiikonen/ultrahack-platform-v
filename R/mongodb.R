@@ -1,5 +1,5 @@
 library(rmongodb)
-library(jsonlite)
+library(doParallel)
 
 #Connect to mongodb
 mongo <- mongo.create(host="127.0.0.1:27017")
@@ -7,29 +7,64 @@ mongo <- mongo.create(host="127.0.0.1:27017")
 #Returns TRUE if connection was succesfull
 mongo.is.connected(mongo)
 
-#Let's change the current directory
-setwd("~/R/Scripts")
-
-#Open data that would come from Cassandra DB
-data <- read.csv("Data.csv", sep=",", header=TRUE)
-
-#Creates BSON object from every row of the dataframe "data"
-bsonObject <- lapply(split(data, 1:nrow(data)), function(data_row) mongo.bson.from.JSON(toJSON(data_row)))
-
-#Check that class is correct (should be "list")
-class(bsonObject)
-
-#Check current databases
-mongo.get.databases(mongo)
-
 #Database
 db <- "local"
 
-#Create name for collection
-collection <- paste(db, "test", sep=".")
+#Check current databases
+collections <- mongo.get.database.collections(mongo, db)
 
-#Insert data with the speficications
-mongo.insert.batch(mongo, collection, bsonObject)
+#Select collection where products are stored
+collection <- collections[3]
 
+#Collection where we insert the model data
+insert_collection <- paste(db, "models", sep=".")
 
+#Get all the values to array for given key
+Ids <- mongo.get.values(mongo, collection , key = "ProductId1234")
+
+######INSERTING DATA###############
+HandleOneProduct <- function(productId) {
+  #Query collection by product ID
+  products <- mongo.find.all(mongo, collection, query = list(ProductId1234 = productId))
+ 
+  #Create dataframe from the list of lists
+  df <- do.call(rbind.data.frame, products)
+  colnames(df)[3] <- "t"
+  
+  #Fit polynomial model of order 3
+  fit <- lm(stock ~ poly(t,3), data=df)
+  
+  #Extract coefficients from the fitted model
+  coefficients <- as.numeric(fit$coefficients)
+  
+
+  productId <- 1.0
+  object <- list(ProductId = productId,
+                 timestamp = max(df$t),
+                 model = list(intercept = coefficients[1],
+                              coef1 = coefficients[2],
+                              coef2 = coefficients[3],
+                              coef3 = coefficients[4])
+                 )
+  
+  #Insert or update model parameters to collection
+  if(mongo.count(mongo, collection, query = list(ProductId1234=productId)) == 0) {
+    
+    mongo.insert(mongo, insert_collection, object)
+    
+  } else {
+    
+    mongo.update(mongo, insert_collection, criteria = list(ProductId=productId), object)
+    
+  }
+ 
+} 
+
+#Write model parameters to all products parallel
+registerDoParallel(cores=2)
+
+foreach(id=Ids) %dopar% HandleOneProduct(id)
+
+#Disconnect
 mongo.disconnect(mongo)
+##################################
