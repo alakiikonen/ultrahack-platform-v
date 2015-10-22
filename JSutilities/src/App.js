@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import {ForecastData} from './VisualizationHelper.js';
+import {ForecastData, MeasurementData} from './VisualizationHelper.js';
 
 
 const data = {
@@ -10,6 +10,15 @@ const data = {
         y: [10.1521, 9.0078, 8.0424, 7.2371, 6.573, 6.0313, 5.5931, 5.2394, 4.9516, 4.7105, 4.4975, 4.2936, 4.0799, 3.8376, 3.5477, 3.1915, 2.75, 2.2044, 1.5357, 0.7093]
     }
 };
+
+const data2 = [{"ProductId1234": 1,"timestamp" : 1445425617,"stock": 10},
+    {"ProductId1234": 1,"timestamp" :  1445425755,"stock": 9},
+    {"ProductId1234": 1,"timestamp" :  1445425760,"stock": 8},
+    {"ProductId1234": 1,"timestamp" :  1445425765,"stock": 7},
+    {"ProductId1234": 1,"timestamp" :  1445426207,"stock": 4},
+    {"ProductId1234": 1,"timestamp" :  1445426448,"stock": 4},
+    {"ProductId1234": 1,"timestamp" :  1445426457,"stock": 3},
+    {"ProductId1234": 1,"timestamp" :  1445426562,"stock": 2}];
 
 
 var config = {
@@ -53,7 +62,9 @@ plotOptions: {
 
 series: [{
     name: "Estimate for Product id: "+data.ProductId,
-    data: ForecastData(data)
+    data: ForecastData(data)},{
+    name: "Measured stock for Product id: "+data.ProductId,
+    data: MeasurementData(data2)
 }]};
 
 var Highcharts = require('react-highcharts');
