@@ -133,6 +133,7 @@ $ ./activator "project <service-name>" "run <PORT>"
 -----------------------------------------------------------------------
 References
 -----------------------------------------------------------------------
+* [Database achitecture](https://github.com/alakiikonen/ultrahack-platform-v/blob/master/DBarchitecture.md)
 * [Play Framework](http://www.playframework.com/)
 * [Microservices](http://martinfowler.com/articles/microservices.html)
 * [Microservices: Decomposing Applications](http://www.infoq.com/articles/microservices-intro)
