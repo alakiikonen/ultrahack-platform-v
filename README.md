@@ -74,7 +74,8 @@ The frontend web app utilizes WebSockets for duplex communication between the pl
 ## 5. Data analytics
 
 This platform allows us to use R-languages vast library analytic functions. We create predictive models from the raw data and push the results to a database from which they can be fetched easily by the web service.
----
+
+=================================
 
 # Micro services architecture
 
